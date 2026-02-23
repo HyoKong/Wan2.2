@@ -478,7 +478,8 @@ def generate(args):
             sampling_steps=args.sample_steps,
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
-            offload_model=args.offload_model)
+            offload_model=args.offload_model,
+            save_clip_dir=args.save_file)
     elif "s2v" in args.task:
         logging.info("Creating WanS2V pipeline.")
         wan_s2v = wan.WanS2V(

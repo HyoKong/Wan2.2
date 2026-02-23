@@ -11,6 +11,7 @@ try:
     import moviepy.editor as mpy
 except:
     import moviepy as mpy
+from tqdm import tqdm
 
 from decord import VideoReader
 from pose2d import Pose2d
@@ -166,7 +167,7 @@ class ProcessPipeline():
             tpl_pose_metas = self.pose2d(frames)
 
             face_images = []
-            for idx, meta in enumerate(tpl_pose_metas):
+            for idx, meta in enumerate(tqdm(tpl_pose_metas, desc='face kpts detection')):
                 face_bbox_for_image = get_face_bboxes(meta['keypoints_face'][:, :2], scale=1.3,
                                                     image_shape=(frames[0].shape[0], frames[0].shape[1]))
 

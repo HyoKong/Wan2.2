@@ -6,7 +6,7 @@ from typing import Union, List
 import numpy as np
 import torch
 import onnxruntime
-
+from tqdm import tqdm
 from pose2d_utils import (
     read_img,
     box_convert_simple,
@@ -15,8 +15,10 @@ from pose2d_utils import (
     keypoints_from_heatmaps,
     load_pose_metas_from_kp2ds_seq
 )
+from tqdm.contrib import tzip
 
-
+from concurrent.futures import ThreadPoolExecutor
+import threading
 class SimpleOnnxInference(object):
     def __init__(self, checkpoint, device='cuda', reverse_input=False, **kwargs):
         if isinstance(device, str):
@@ -377,6 +379,7 @@ class Pose2d:
                     if not ret:
                         break
                     frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                    # frames.append(frame)
                 cap.release()
                 images = frames
             elif inputs.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp')):
@@ -414,14 +417,60 @@ class Pose2d:
         H, W = images[0].shape[:2]
         if self.detector is not None:
             bboxes = []
-            for _image in images:
+            for _image in tqdm(images, desc='detect persons'):
                 img, shape = self.detector.preprocess(_image)
                 bboxes.append(self.detector(img[None], shape[None])[0][0]["bbox"])
         else:
             bboxes = [None] * len(images)
 
+        # if self.detector is not None:
+        #     batch_size = 64  # tune based on VRAM
+        #     bboxes = []
+            
+        #     all_imgs, all_shapes = [], []
+        #     for _image in images:
+        #         img, shape = self.detector.preprocess(_image)
+        #         all_imgs.append(img)
+        #         all_shapes.append(shape)
+            
+        #     all_imgs = np.stack(all_imgs, axis=0)      # (N, 3, H, W)
+        #     all_shapes = np.stack(all_shapes, axis=0)  # (N, 2)
+            
+        #     for start in tqdm(range(0, len(images), batch_size), desc='detect persons'):
+        #         end = min(start + batch_size, len(images))
+        #         batch_imgs = all_imgs[start:end]
+        #         batch_shapes = all_shapes[start:end]
+        #         batch_results = self.detector(batch_imgs, batch_shapes)
+        #         for result in batch_results:
+        #             bboxes.append(result[0]["bbox"])
+
+        # if self.detector is not None:
+        #     all_imgs, all_shapes = [], []
+        #     for _image in images:
+        #         img, shape = self.detector.preprocess(_image)
+        #         all_imgs.append(img)
+        #         all_shapes.append(shape)
+
+        #     bboxes = [None] * len(images)
+        #     lock = threading.Lock()
+
+        #     def detect_single(i):
+        #         result = self.detector(all_imgs[i][None], all_shapes[i][None])
+        #         with lock:
+        #             bboxes[i] = result[0][0]["bbox"]
+
+        #     num_workers = 16  # tune based on CPU cores / GPU contention
+        #     with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        #         list(tqdm(
+        #             executor.map(detect_single, range(len(images))),
+        #             total=len(images),
+        #             desc='detect persons'
+        #         ))
+
         kp2ds = []
-        for _image, _bbox in zip(images, bboxes):
+        # for _image, _bbox in tqdm(zip(images, bboxes), desc='kpts2d based on cropped images'):
+        for _image, _bbox in tzip(images, bboxes, desc='kpts2d based on cropped images'):
+
             img, center, scale = self.model.preprocess(_image, _bbox)
             kp2ds.append(self.model(img[None], center[None], scale[None]))
         kp2ds = np.concatenate(kp2ds, 0)

@@ -30,7 +30,8 @@ from .utils.fm_solvers import (
     retrieve_timesteps,
 )
 from .utils.fm_solvers_unipc import FlowUniPCMultistepScheduler
-
+import imageio.v3 as iio
+from wan.utils.utils import merge_video_audio, save_video, str2bool
 
 
 class WanAnimate:
@@ -277,7 +278,10 @@ class WanAnimate:
         face_idxs = list(range(face_len))
         face_images = face_video_reader.get_batch(face_idxs).asnumpy()
         height, width = cond_images[0].shape[:2]
-        refer_images = cv2.imread(src_ref_path)[..., ::-1]
+        # refer_images = cv2.imread(src_ref_path)[..., ::-1]
+
+        # Load with imageio (comes in as RGB)
+        refer_images = iio.imread(src_ref_path)[..., :3]
         refer_images = self.padding_resize(refer_images, height=height, width=width)
         return cond_images, face_images, refer_images
     
@@ -308,6 +312,8 @@ class WanAnimate:
         n_prompt="",
         seed=-1,
         offload_model=True,
+        save_clip_dir=None,  # NEW: directory to save individual clips
+        fps=16,              # NEW: fps for saved clips
     ):
         r"""
         Generates video frames from input image using diffusion process.
@@ -635,6 +641,24 @@ class WanAnimate:
 
                 x0 = [x.to(dtype=torch.float32) for x in x0]
                 out_frames = torch.stack(self.vae.decode([x0[0][:, 1:]]))
+
+                # Trim overlap frames (same logic as what gets appended)
+                out_frames_to_save = out_frames if start == 0 else out_frames[:, :, refert_num:]
+
+                # ── NEW: save this clip ──────────────────────────────────────
+                if save_clip_dir is not None and self.rank == 0:
+                    os.makedirs(save_clip_dir, exist_ok=True)
+                    clip_index = len(all_out_frames)  # 0-based index before append
+                    clip_save_path = os.path.join(save_clip_dir, f"clip_{clip_index:04d}.mp4")
+                    save_video(
+                        tensor=out_frames_to_save[None],  # add batch dim: (1, C, T, H, W)
+                        save_file=clip_save_path,
+                        fps=fps,
+                        nrow=1,
+                        normalize=True,
+                        value_range=(-1, 1),
+                    )
+                    logging.info(f"Saved clip {clip_index} to {clip_save_path}")
                 
                 if start != 0:
                     out_frames = out_frames[:, :, refert_num:]

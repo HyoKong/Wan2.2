@@ -36,6 +36,26 @@ def read_img(image, convert='RGB', check_exist=False):
                 img = img.convert(convert)
             return np.asarray(img)
 
+# def read_img(image, convert='RGB', check_exist=False):
+#     if isinstance(image, str):
+#         if check_exist and not osp.exists(image):
+#             return None
+#         try:
+#             img = Image.open(image)
+#             if convert:
+#                 img = img.convert(convert)
+#         except:
+#             raise IOError('File error: ', image)
+#         return np.asarray(img)
+#     else:
+#         if isinstance(image, np.ndarray):
+#             if convert:
+#                 return np.ascontiguousarray(image[..., ::-1])  # ✅ fix negative stride
+#         else:
+#             if convert:
+#                 img = img.convert(convert)
+#             return np.asarray(img)
+
 class AAPoseMeta:
     def __init__(self, meta=None, kp2ds=None):
         self.image_id = ""
