@@ -244,6 +244,11 @@ def _parse_args():
         action="store_true",
         default=False,
         help="Whether to use relighting lora.")
+    parser.add_argument(
+        "--output_path",
+        type=str,
+        default=None,
+        help="The file of the output path. Default None.")
     
     # following args only works for s2v
     parser.add_argument(
@@ -479,7 +484,7 @@ def generate(args):
             guide_scale=args.sample_guide_scale,
             seed=args.base_seed,
             offload_model=args.offload_model,
-            save_clip_dir=args.save_file)
+            save_clip_dir=args.output_path)
     elif "s2v" in args.task:
         logging.info("Creating WanS2V pipeline.")
         wan_s2v = wan.WanS2V(
@@ -546,7 +551,7 @@ def generate(args):
             formatted_prompt = args.prompt.replace(" ", "_").replace("/",
                                                                      "_")[:50]
             suffix = '.mp4'
-            args.save_file = f"{args.task}_{args.size.replace('*','x') if sys.platform=='win32' else args.size}_{args.ulysses_size}_{formatted_prompt}_{formatted_time}" + suffix
+            args.save_file = os.path.join(args.output_path, f"{args.task}_{args.size.replace('*','x') if sys.platform=='win32' else args.size}_{args.ulysses_size}_{formatted_prompt}_{formatted_time}" + suffix)
 
         logging.info(f"Saving generated video to {args.save_file}")
         save_video(
