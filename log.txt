@@ -9,3 +9,15 @@ python ./wan/modules/animate/preprocess/preprocess_data.py \
 
 
 python generate.py --task animate-14B --ckpt_dir ./Wan2.2-Animate-14B/ --src_root_path ./examples/wan_animate/ow1/process_results/ --refert_num 1 --frame_num 81 --output_path ./examples/wan_animate/ow1/results/
+
+python ./wan/modules/animate/preprocess/preprocess_data.py \
+    --ckpt_path ./Wan2.2-Animate-14B/process_checkpoint \
+    --video_path ./examples/wan_animate/ow2/ow2.MP4 \
+    --refer_path ./examples/wan_animate/ow2/image.png \
+    --save_path ./examples/wan_animate/ow2/process_results \
+    --resolution_area 1280 720 \
+    --retarget_flag \
+    --use_flux
+
+
+python generate.py --task animate-14B --ckpt_dir ./Wan2.2-Animate-14B/ --src_root_path ./examples/wan_animate/ow2/process_results/ --refert_num 1 --output_path ./examples/wan_animate/ow2/results/

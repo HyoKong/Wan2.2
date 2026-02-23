@@ -645,13 +645,12 @@ class WanAnimate:
                 # Trim overlap frames (same logic as what gets appended)
                 out_frames_to_save = out_frames if start == 0 else out_frames[:, :, refert_num:]
 
-                # ── NEW: save this clip ──────────────────────────────────────
                 if save_clip_dir is not None and self.rank == 0:
                     os.makedirs(save_clip_dir, exist_ok=True)
-                    clip_index = len(all_out_frames)  # 0-based index before append
+                    clip_index = len(all_out_frames)
                     clip_save_path = os.path.join(save_clip_dir, f"clip_{clip_index:04d}.mp4")
                     save_video(
-                        tensor=out_frames_to_save[None],  # add batch dim: (1, C, T, H, W)
+                        tensor=out_frames_to_save[0][None],  # [0] drops batch dim → (C,T,H,W), [None] re-adds it → (1,C,T,H,W)
                         save_file=clip_save_path,
                         fps=fps,
                         nrow=1,
